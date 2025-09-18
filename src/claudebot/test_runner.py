@@ -4,7 +4,6 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, List
 
 from .models import TestResult
 from .utils import convert_test_name_to_pytest_path
@@ -14,8 +13,8 @@ class TestRunner:
     """Manages test execution and result parsing."""
 
     def run_full_test_suite(
-        self, test_paths: List[str], timeout: int = 600, verbose: bool = False
-    ) -> Dict[str, TestResult]:
+        self, test_paths: list[str], timeout: int = 600, verbose: bool = False
+    ) -> dict[str, TestResult]:
         """
         Run the full test suite and return test results.
 
@@ -50,7 +49,7 @@ class TestRunner:
                 print(f"🔧 Running command: {' '.join(cmd)}")
 
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
+                cmd, capture_output=True, text=True, timeout=timeout, check=False
             )
 
             if verbose:
@@ -96,7 +95,7 @@ class TestRunner:
                 ["uv", "run", "pytest", test_path, "-v", "--tb=short"],
                 capture_output=True,
                 text=True,
-                timeout=timeout,
+                timeout=timeout, check=False,
             )
 
             status = "PASSING" if result.returncode == 0 else "FAILING"
@@ -115,7 +114,7 @@ class TestRunner:
 
     def _parse_junit_xml(
         self, xml_file: str, verbose: bool = False
-    ) -> Dict[str, TestResult]:
+    ) -> dict[str, TestResult]:
         """
         Parse JUnit XML file to extract test results.
 
@@ -190,7 +189,7 @@ class TestRunner:
 
         return results
 
-    def _parse_pytest_output(self, output: str) -> Dict[str, TestResult]:
+    def _parse_pytest_output(self, output: str) -> dict[str, TestResult]:
         """
         Fallback parser for pytest output (deprecated - use JUnit XML instead).
         """

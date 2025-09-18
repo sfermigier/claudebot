@@ -6,8 +6,6 @@ import subprocess
 class GitError(Exception):
     """Raised when a git operation fails."""
 
-    pass
-
 
 class GitManager:
     """Manages git operations for ClaudeBot."""

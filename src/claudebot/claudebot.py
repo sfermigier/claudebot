@@ -5,7 +5,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional
 
 from .git_manager import GitManager, GitError
 from .models import TestResult
@@ -39,7 +39,7 @@ class ClaudeBot:
 
     def __init__(
         self,
-        test_paths: List[str],
+        test_paths: list[str],
         prompt_file: str = "prompt-fix.md",
         verbose: bool = False,
         debug: bool = False,
@@ -61,14 +61,14 @@ class ClaudeBot:
             self.prompt_template = self._get_default_prompt()
 
         # Test state tracking
-        self.test_results: Dict[str, TestResult] = {}
-        self.previously_passing: Set[str] = set()
+        self.test_results: dict[str, TestResult] = {}
+        self.previously_passing: set[str] = set()
 
     def _get_default_prompt(self) -> str:
         """Get default prompt template if prompt-fix.md doesn't exist."""
         return PROMPT_FIX
 
-    def discover_and_run_tests(self) -> Tuple[int, int]:
+    def discover_and_run_tests(self) -> tuple[int, int]:
         """
         Discover and run all tests, updating internal state.
 
@@ -175,7 +175,7 @@ class ClaudeBot:
             result = subprocess.run(
                 cmd,
                 text=True,
-                capture_output=False,  # Let Claude output be visible
+                capture_output=False, check=False,  # Let Claude output be visible
             )
 
             success = result.returncode == 0
@@ -213,10 +213,9 @@ class ClaudeBot:
         if result.status == "PASSING":
             print(f"✅ Test {test_name} is now PASSING!")
             return True
-        else:
-            print(f"❌ Test {test_name} is still FAILING")
-            sys.exit(1)
-            return False
+        print(f"❌ Test {test_name} is still FAILING")
+        sys.exit(1)
+        return False
 
     def check_no_regression(self) -> bool:
         """
@@ -257,9 +256,8 @@ class ClaudeBot:
             if len(failed_tests) > 5:
                 print(f"   ... and {len(failed_tests) - 5} more")
             return False
-        else:
-            print("✅ No regression detected - all previously passing tests still pass")
-            return True
+        print("✅ No regression detected - all previously passing tests still pass")
+        return True
 
     def fix_single_test(self, test_name: str) -> bool:
         """
