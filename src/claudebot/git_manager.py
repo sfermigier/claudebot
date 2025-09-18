@@ -3,6 +3,12 @@
 import subprocess
 
 
+class GitError(Exception):
+    """Raised when a git operation fails."""
+
+    pass
+
+
 class GitManager:
     """Manages git operations for ClaudeBot."""
 
@@ -20,16 +26,19 @@ class GitManager:
         )
         return bool(result.stdout.strip())
 
-    def reset_to_commit(self, commit_hash: str):
+    def reset_to_commit(self, commit_hash: str) -> None:
         """Reset to a specific commit, discarding changes."""
-        subprocess.run(
-            ["git", "reset", "--hard", commit_hash],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        try:
+            subprocess.run(
+                ["git", "reset", "--hard", commit_hash],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError as e:
+            raise GitError(f"Failed to reset to {commit_hash}") from e
 
-    def commit_changes(self, message: str) -> bool:
+    def commit_changes(self, message: str) -> None:
         """Commit current changes."""
         try:
             # Add all changes
@@ -44,7 +53,5 @@ class GitManager:
                 text=True,
                 check=True,
             )
-            return True
         except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to commit changes: {e}")
-            return False
+            raise GitError(f"Failed to commit changes: {e}") from e

@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from .git_manager import GitManager
+from .git_manager import GitManager, GitError
 from .models import TestResult
 from .test_runner import TestRunner
 
@@ -96,14 +96,14 @@ class ClaudeBot:
         }
 
         passing_count = len(self.previously_passing)
-        failing_count = len([
-            r for r in self.test_results.values() if r.status == "FAILING"
-        ])
-        skipped_count = len([
-            r for r in self.test_results.values() if r.status == "SKIPPED"
-        ])
+        failing_count = len(
+            [r for r in self.test_results.values() if r.status == "FAILING"]
+        )
+        skipped_count = len(
+            [r for r in self.test_results.values() if r.status == "SKIPPED"]
+        )
 
-        print(f"📊 Test Results:")
+        print("📊 Test Results:")
         print(f"   ✅ Passing: {passing_count}")
         print(f"   ❌ Failing: {failing_count}")
         if skipped_count > 0:
@@ -111,7 +111,7 @@ class ClaudeBot:
         print(f"   📋 Total: {len(self.test_results)}")
 
         if self.verbose and failing_count > 0:
-            print(f"\n📝 First few failing tests:")
+            print("\n📝 First few failing tests:")
             failing_tests = [
                 name
                 for name, result in self.test_results.items()
@@ -161,7 +161,7 @@ class ClaudeBot:
         )
 
         if self.debug:
-            print(f"\n🔍 DEBUG: Prompt being sent to Claude:")
+            print("\n🔍 DEBUG: Prompt being sent to Claude:")
             print(f"{'=' * 60}")
             print(prompt)
             print(f"{'=' * 60}\n")
@@ -188,7 +188,7 @@ class ClaudeBot:
             print(f"❌ Error running Claude: {e}")
             return False
         except KeyboardInterrupt:
-            print(f"\n⚠️ Claude interrupted by user")
+            print("\n⚠️ Claude interrupted by user")
             return False
 
     def check_test_fixed(self, test_name: str) -> bool:
@@ -258,9 +258,7 @@ class ClaudeBot:
                 print(f"   ... and {len(failed_tests) - 5} more")
             return False
         else:
-            print(
-                f"✅ No regression detected - all previously passing tests still pass"
-            )
+            print("✅ No regression detected - all previously passing tests still pass")
             return True
 
     def fix_single_test(self, test_name: str) -> bool:
@@ -306,7 +304,8 @@ class ClaudeBot:
         commit_message = (
             f"fix: resolve failing test {test_name}\n\n🤖 Generated with ClaudeBot"
         )
-        if self.git_manager.commit_changes(commit_message):
+        try:
+            self.git_manager.commit_changes(commit_message)
             print(f"✅ Successfully fixed and committed {test_name}")
 
             # Update our test state
@@ -315,8 +314,9 @@ class ClaudeBot:
             self.previously_passing.add(test_name)
 
             return True
-        else:
-            print(f"❌ Failed to commit changes for {test_name}")
+        except GitError as e:
+            print(f"❌ Failed to commit changes for {test_name}: {e}")
+            print("❌ Rolling back changes...")
             self.git_manager.reset_to_commit(initial_commit)
             return False
 
@@ -336,7 +336,7 @@ class ClaudeBot:
         if max_iterations:
             print(f"🔄 Max iterations: {max_iterations}")
         else:
-            print(f"🔄 Running indefinitely (Ctrl+C to stop)")
+            print("🔄 Running indefinitely (Ctrl+C to stop)")
 
         # Initial test discovery
         passing, failing = self.discover_and_run_tests()
@@ -369,17 +369,22 @@ class ClaudeBot:
                 print(f"{'=' * 80}")
 
                 # Attempt to fix the test
-                if self.fix_single_test(test_to_fix):
-                    fixes_made += 1
-                    print(f"🎊 Fix #{fixes_made} completed successfully!")
-                else:
-                    print(f"💔 Fix attempt failed for {test_to_fix}")
+                try:
+                    if self.fix_single_test(test_to_fix):
+                        fixes_made += 1
+                        print(f"🎊 Fix #{fixes_made} completed successfully!")
+                    else:
+                        print(f"💔 Fix attempt failed for {test_to_fix}")
+                except GitError as e:
+                    print(f"💀 CRITICAL GIT ERROR: {e}")
+                    print("💀 Repository state is corrupted. ClaudeBot must stop.")
+                    raise
 
                 # Status update
-                current_failing = len([
-                    r for r in self.test_results.values() if r.status == "FAILING"
-                ])
-                print(f"\n📊 Current status:")
+                current_failing = len(
+                    [r for r in self.test_results.values() if r.status == "FAILING"]
+                )
+                print("\n📊 Current status:")
                 print(f"   🔧 Fixes made this session: {fixes_made}")
                 print(f"   ❌ Tests still failing: {current_failing}")
                 print(f"   ✅ Tests passing: {len(self.previously_passing)}")
@@ -394,7 +399,11 @@ class ClaudeBot:
                         time.sleep(delay_between_tests)
 
         except KeyboardInterrupt:
-            print(f"\n🛑 ClaudeBot stopped by user")
+            print("\n🛑 ClaudeBot stopped by user")
+        except GitError as e:
+            print(f"\n💀 FATAL: ClaudeBot stopped due to git error: {e}")
+            print("💀 Please manually check and fix your repository state.")
+            sys.exit(1)
 
         # Final summary
         self.print_final_summary(fixes_made, iteration)
@@ -402,14 +411,14 @@ class ClaudeBot:
     def print_final_summary(self, fixes_made: int, iterations: int) -> None:
         """Print final summary of the ClaudeBot session."""
         print(f"\n{'=' * 80}")
-        print(f"📊 CLAUDEBOT SESSION SUMMARY")
+        print("📊 CLAUDEBOT SESSION SUMMARY")
         print(f"{'=' * 80}")
         print(f"🔄 Iterations completed: {iterations}")
         print(f"🔧 Tests fixed: {fixes_made}")
 
-        current_failing = len([
-            r for r in self.test_results.values() if r.status == "FAILING"
-        ])
+        current_failing = len(
+            [r for r in self.test_results.values() if r.status == "FAILING"]
+        )
         current_passing = len(self.previously_passing)
         total = current_passing + current_failing
 
@@ -420,11 +429,11 @@ class ClaudeBot:
             print(f"📊 Success rate: {success_rate:.1f}%")
 
             if fixes_made > 0:
-                print(f"\n🎉 ClaudeBot successfully improved the test suite!")
+                print("\n🎉 ClaudeBot successfully improved the test suite!")
             elif current_failing == 0:
-                print(f"\n🏆 All tests are now passing!")
+                print("\n🏆 All tests are now passing!")
             else:
-                print(f"\n💪 Keep running ClaudeBot to fix more tests!")
+                print("\n💪 Keep running ClaudeBot to fix more tests!")
 
 
 def main():

@@ -92,7 +92,6 @@ class TestRunner:
         test_path = convert_test_name_to_pytest_path(test_name)
 
         try:
-
             result = subprocess.run(
                 ["uv", "run", "pytest", test_path, "-v", "--tb=short"],
                 capture_output=True,

@@ -10,13 +10,14 @@ This package continuously fixes failing tests using Claude Code:
 """
 
 from .claudebot import ClaudeBot, main
-from .git_manager import GitManager
+from .git_manager import GitManager, GitError
 from .models import TestResult
 from .test_runner import TestRunner
 from .utils import convert_test_name_to_pytest_path
 
 __all__ = [
     "ClaudeBot",
+    "GitError",
     "GitManager",
     "TestResult",
     "TestRunner",
