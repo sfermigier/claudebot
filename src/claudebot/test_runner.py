@@ -91,8 +91,10 @@ class TestRunner:
         test_path = convert_test_name_to_pytest_path(test_name)
 
         try:
+            cmd = ["uv", "run", "pytest", test_path, "-v", "--tb=short"]
+            print(f"🧪 Running single test: {test_name} ({' '.join(cmd)})")
             result = subprocess.run(
-                ["uv", "run", "pytest", test_path, "-v", "--tb=short"],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,

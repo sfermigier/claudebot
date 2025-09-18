@@ -372,8 +372,18 @@ class ClaudeBot:
                 test_to_fix = self.get_random_failing_test()
 
                 if not test_to_fix:
-                    print("\n🎉 No more failing tests! All tests are now passing.")
-                    break
+                    print("\n🎉 No failing tests found! Re-running test discovery...")
+                    passing, failing = self.discover_and_run_tests()
+
+                    if failing == 0:
+                        print(
+                            f"✅ All tests are still passing. Waiting {delay_between_tests} seconds before checking again..."
+                        )
+                        time.sleep(delay_between_tests)
+                        continue
+                    else:
+                        print(f"🔍 Found {failing} new failing tests!")
+                        continue
 
                 print(f"\n{'=' * 80}")
                 print(f"🔄 ITERATION {iteration}")
@@ -451,9 +461,20 @@ class ClaudeBot:
 def main():
     """Main function with command line argument parsing."""
     import argparse
+    from importlib.metadata import version
+
+    try:
+        pkg_version = version("claudebot")
+    except Exception:
+        pkg_version = "unknown"
 
     parser = argparse.ArgumentParser(
         description="ClaudeBot - Autonomous test fixing with Claude Code"
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"claudebot {pkg_version}",
     )
     parser.add_argument(
         "test_paths",
