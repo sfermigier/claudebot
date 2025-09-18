@@ -95,7 +95,8 @@ class TestRunner:
                 ["uv", "run", "pytest", test_path, "-v", "--tb=short"],
                 capture_output=True,
                 text=True,
-                timeout=timeout, check=False,
+                timeout=timeout,
+                check=False,
             )
 
             status = "PASSING" if result.returncode == 0 else "FAILING"

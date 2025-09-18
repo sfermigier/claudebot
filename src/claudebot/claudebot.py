@@ -96,12 +96,12 @@ class ClaudeBot:
         }
 
         passing_count = len(self.previously_passing)
-        failing_count = len(
-            [r for r in self.test_results.values() if r.status == "FAILING"]
-        )
-        skipped_count = len(
-            [r for r in self.test_results.values() if r.status == "SKIPPED"]
-        )
+        failing_count = len([
+            r for r in self.test_results.values() if r.status == "FAILING"
+        ])
+        skipped_count = len([
+            r for r in self.test_results.values() if r.status == "SKIPPED"
+        ])
 
         print("📊 Test Results:")
         print(f"   ✅ Passing: {passing_count}")
@@ -172,15 +172,26 @@ class ClaudeBot:
             if self.verbose:
                 print(f"🔧 Running command: {' '.join(cmd[:3])} [prompt...]")
 
-            result = subprocess.run(
+            # Stream Claude's output in real-time
+            process = subprocess.Popen(
                 cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                capture_output=False, check=False,  # Let Claude output be visible
+                bufsize=1,
+                universal_newlines=True,
             )
 
-            success = result.returncode == 0
+            # Stream output line by line
+            for line in process.stdout:
+                print(line, end="")
+
+            # Wait for process to complete
+            return_code = process.wait()
+
+            success = return_code == 0
             print(
-                f"{'✅' if success else '❌'} Claude finished with return code: {result.returncode}"
+                f"\n{'✅' if success else '❌'} Claude finished with return code: {return_code}"
             )
             return success
 
@@ -189,6 +200,9 @@ class ClaudeBot:
             return False
         except KeyboardInterrupt:
             print("\n⚠️ Claude interrupted by user")
+            if "process" in locals():
+                process.terminate()
+                process.wait()
             return False
 
     def check_test_fixed(self, test_name: str) -> bool:
@@ -379,9 +393,9 @@ class ClaudeBot:
                     raise
 
                 # Status update
-                current_failing = len(
-                    [r for r in self.test_results.values() if r.status == "FAILING"]
-                )
+                current_failing = len([
+                    r for r in self.test_results.values() if r.status == "FAILING"
+                ])
                 print("\n📊 Current status:")
                 print(f"   🔧 Fixes made this session: {fixes_made}")
                 print(f"   ❌ Tests still failing: {current_failing}")
@@ -414,9 +428,9 @@ class ClaudeBot:
         print(f"🔄 Iterations completed: {iterations}")
         print(f"🔧 Tests fixed: {fixes_made}")
 
-        current_failing = len(
-            [r for r in self.test_results.values() if r.status == "FAILING"]
-        )
+        current_failing = len([
+            r for r in self.test_results.values() if r.status == "FAILING"
+        ])
         current_passing = len(self.previously_passing)
         total = current_passing + current_failing
 
