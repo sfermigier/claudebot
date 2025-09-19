@@ -227,9 +227,9 @@ class ClaudeBot:
         if result.status == "PASSING":
             print(f"✅ Test {test_name} is now PASSING!")
             return True
-        print(f"❌ Test {test_name} is still FAILING")
-        sys.exit(1)
-        return False
+        else:
+            print(f"❌ Test {test_name} is still FAILING")
+            return False
 
     def check_no_regression(self) -> bool:
         """
