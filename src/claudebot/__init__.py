@@ -14,11 +14,16 @@ from .git_manager import GitManager, GitError
 from .models import TestResult
 from .test_runner import TestRunner
 from .utils import convert_test_name_to_pytest_path
+from .prompt_generator import PromptGenerator, PromptRequest
+from .generators.test_fixer import TestFixerGenerator
 
 __all__ = [
     "ClaudeBot",
     "GitError",
     "GitManager",
+    "PromptGenerator",
+    "PromptRequest",
+    "TestFixerGenerator",
     "TestResult",
     "TestRunner",
     "convert_test_name_to_pytest_path",

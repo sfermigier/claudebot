@@ -1,15 +1,18 @@
 """Main ClaudeBot class and CLI functionality."""
 
+import importlib.util
 import random
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Set, Tuple, Iterator
 
 from .git_manager import GitManager, GitError
 from .models import TestResult
 from .test_runner import TestRunner
+from .prompt_generator import PromptGenerator, PromptRequest, FunctionBasedGenerator
+from .generators.test_fixer import TestFixerGenerator
 
 PROMPT_FIX = """
 The following test is currently failing in our Python compiler project.
@@ -41,6 +44,7 @@ class ClaudeBot:
         self,
         test_paths: list[str],
         prompt_file: str = "prompt-fix.md",
+        prompt_generator_module: Optional[str] = None,
         verbose: bool = False,
         debug: bool = False,
     ):
@@ -51,18 +55,126 @@ class ClaudeBot:
         self.git_manager = GitManager()
         self.test_runner = TestRunner()
 
-        # Load the prompt template
-        if self.prompt_file.exists():
-            self.prompt_template = self.prompt_file.read_text()
-        else:
-            print(
-                f"⚠️ Warning: Prompt file {prompt_file} not found, using default prompt"
-            )
-            self.prompt_template = self._get_default_prompt()
+        # Load prompt generator
+        self.prompt_generator = self._load_prompt_generator(
+            prompt_generator_module, prompt_file
+        )
 
         # Test state tracking
         self.test_results: dict[str, TestResult] = {}
         self.previously_passing: set[str] = set()
+
+    def _load_prompt_generator(
+        self, generator_module: Optional[str], prompt_file: str
+    ) -> PromptGenerator:
+        """Load a prompt generator from module or use default test fixer."""
+        if generator_module:
+            return self._load_generator_from_module(generator_module)
+
+        # Use default test fixer with custom prompt if available
+        if self.prompt_file.exists():
+            prompt_template = self.prompt_file.read_text()
+            return TestFixerGenerator(prompt_template)
+        else:
+            print(
+                f"⚠️ Warning: Prompt file {prompt_file} not found, using default prompt"
+            )
+            return TestFixerGenerator()
+
+    def _load_generator_from_module(self, module_path: str) -> PromptGenerator:
+        """Load prompt generator from a Python module."""
+        try:
+            # Handle .py file paths
+            if module_path.endswith(".py"):
+                module_path = Path(module_path)
+                if not module_path.exists():
+                    raise ImportError(f"Module file not found: {module_path}")
+
+                spec = importlib.util.spec_from_file_location(
+                    "prompt_generator", module_path
+                )
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+            else:
+                # Handle module import paths (e.g., package.module)
+                module = importlib.import_module(module_path)
+
+            # Look for get_prompts function
+            if hasattr(module, "get_prompts"):
+                # Create a wrapper generator for function-based generators
+                return FunctionBasedGenerator(module.get_prompts)
+
+            # Look for a class that implements PromptGenerator
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, PromptGenerator)
+                    and attr != PromptGenerator
+                ):
+                    return attr()
+
+            raise ImportError(f"No prompt generator found in module: {module_path}")
+
+        except Exception as e:
+            print(f"❌ Failed to load prompt generator from {module_path}: {e}")
+            print("🔄 Falling back to default test fixer generator")
+            return TestFixerGenerator()
+
+    def _execute_prompt_request(self, request: PromptRequest) -> bool:
+        """Execute a prompt request using Claude."""
+        print(f"\n🤖 Running Claude Code: {request.description}")
+
+        if self.debug:
+            print(f"\n🔍 DEBUG: Prompt being sent to Claude:")
+            print(f"{'=' * 60}")
+            print(request.prompt)
+            print(f"{'=' * 60}\n")
+
+        try:
+            cmd = [
+                "claude",
+                "--dangerously-skip-permissions",
+                "-c",
+                "-p",
+                request.prompt,
+            ]
+
+            if self.verbose:
+                print(f"🔧 Running command: {' '.join(cmd[:4])} [prompt...]")
+
+            # Stream Claude's output in real-time
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            # Stream output line by line
+            for line in process.stdout:
+                print(line, end="")
+
+            # Wait for process to complete
+            return_code = process.wait()
+
+            success = return_code == 0
+            print(
+                f"\n{'✅' if success else '❌'} Claude finished with return code: {return_code}"
+            )
+            return success
+
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Error running Claude: {e}")
+            return False
+        except KeyboardInterrupt:
+            print("\n⚠️ Claude interrupted by user")
+            if "process" in locals():
+                process.terminate()
+                process.wait()
+            return False
 
     def _get_default_prompt(self) -> str:
         """Get default prompt template if prompt-fix.md doesn't exist."""
@@ -342,9 +454,9 @@ class ClaudeBot:
             max_iterations: Maximum number of fix attempts (None for unlimited)
             delay_between_tests: Delay in seconds between test fix attempts
         """
-        print("🚀 Starting ClaudeBot - Autonomous Test Fixing")
-        print(f"📝 Using prompt template: {self.prompt_file}")
-        print(f"⏰ Delay between tests: {delay_between_tests} seconds")
+        print("🚀 Starting ClaudeBot")
+        print(f"🎯 Using prompt generator: {type(self.prompt_generator).__name__}")
+        print(f"⏰ Delay between iterations: {delay_between_tests} seconds")
         if max_iterations:
             print(f"🔄 Max iterations: {max_iterations}")
         else:
@@ -368,57 +480,72 @@ class ClaudeBot:
                     print(f"\n🏁 Reached maximum iterations ({max_iterations})")
                     break
 
-                # Get a random failing test
-                test_to_fix = self.get_random_failing_test()
-
-                if not test_to_fix:
-                    print("\n🎉 No failing tests found! Re-running test discovery...")
+                # Check if generator wants to continue
+                if not self.prompt_generator.should_continue(self.test_results):
+                    print("\n🎉 Prompt generator indicates work is complete!")
+                    print("🔄 Re-running test discovery to check for new work...")
                     passing, failing = self.discover_and_run_tests()
 
-                    if failing == 0:
+                    if not self.prompt_generator.should_continue(self.test_results):
                         print(
-                            f"✅ All tests are still passing. Waiting {delay_between_tests} seconds before checking again..."
+                            f"✅ No more work to do. Waiting {delay_between_tests} seconds before checking again..."
                         )
                         time.sleep(delay_between_tests)
-                        continue
-                    else:
-                        print(f"🔍 Found {failing} new failing tests!")
                         continue
 
                 print(f"\n{'=' * 80}")
                 print(f"🔄 ITERATION {iteration}")
-                print(f"🎯 Selected test to fix: {test_to_fix}")
                 print(f"{'=' * 80}")
 
-                # Attempt to fix the test
-                try:
-                    if self.fix_single_test(test_to_fix):
-                        fixes_made += 1
-                        print(f"🎊 Fix #{fixes_made} completed successfully!")
-                    else:
-                        print(f"💔 Fix attempt failed for {test_to_fix}")
-                except GitError as e:
-                    print(f"💀 CRITICAL GIT ERROR: {e}")
-                    print("💀 Repository state is corrupted. ClaudeBot must stop.")
-                    raise
+                # Get prompts from generator
+                prompts = list(
+                    self.prompt_generator.get_prompts(
+                        self.test_results, verbose=self.verbose, debug=self.debug
+                    )
+                )
+
+                if not prompts:
+                    print("⚠️ No prompts generated, checking again after delay...")
+                    time.sleep(delay_between_tests)
+                    continue
+
+                # Process the first prompt (generators can yield multiple, but we process one per iteration)
+                request = prompts[0]
+                print(f"🎯 Processing: {request.description}")
+
+                # Execute the prompt
+                success = self._execute_prompt_request(request)
+
+                # Notify generator of completion
+                self.prompt_generator.on_prompt_completed(
+                    request, success, self.test_results
+                )
+
+                if success:
+                    fixes_made += 1
+                    print(f"🎊 Task #{fixes_made} completed successfully!")
+                else:
+                    print(f"💔 Task failed: {request.description}")
+
+                # Update test results after execution
+                self.discover_and_run_tests()
 
                 # Status update
                 current_failing = len([
                     r for r in self.test_results.values() if r.status == "FAILING"
                 ])
-                print("\n📊 Current status:")
-                print(f"   🔧 Fixes made this session: {fixes_made}")
-                print(f"   ❌ Tests still failing: {current_failing}")
+                print(f"\n📊 Current status:")
+                print(f"   🔧 Tasks completed this session: {fixes_made}")
+                print(f"   ❌ Tests failing: {current_failing}")
                 print(f"   ✅ Tests passing: {len(self.previously_passing)}")
 
-                # Delay before next iteration (unless this is the last one)
+                # Delay before next iteration
                 if max_iterations is None or iteration < max_iterations:
-                    if current_failing > 0:
-                        print(
-                            f"\n⏳ Waiting {delay_between_tests} seconds before next test..."
-                        )
-                        print("   (Press Ctrl+C to stop)")
-                        time.sleep(delay_between_tests)
+                    print(
+                        f"\n⏳ Waiting {delay_between_tests} seconds before next iteration..."
+                    )
+                    print("   (Press Ctrl+C to stop)")
+                    time.sleep(delay_between_tests)
 
         except KeyboardInterrupt:
             print("\n🛑 ClaudeBot stopped by user")
@@ -489,6 +616,13 @@ def main():
         help="Prompt template file (default: prompt-fix.md)",
     )
     parser.add_argument(
+        "--prompt-generator",
+        "--pg",
+        type=str,
+        default=None,
+        help="Python module containing prompt generator (e.g., 'my_generator.py' or 'package.module')",
+    )
+    parser.add_argument(
         "--max-iterations",
         type=int,
         default=None,
@@ -522,7 +656,11 @@ def main():
 
     # Create and run ClaudeBot
     bot = ClaudeBot(
-        args.test_paths, args.prompt, verbose=args.verbose, debug=args.debug
+        args.test_paths,
+        args.prompt,
+        prompt_generator_module=args.prompt_generator,
+        verbose=args.verbose,
+        debug=args.debug,
     )
 
     if args.dry_run:
