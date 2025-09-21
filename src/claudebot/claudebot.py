@@ -167,10 +167,10 @@ class ClaudeBot:
             print(f"{'=' * 60}\n")
 
         try:
-            cmd = ["claude", "--dangerously-skip-permissions", "-p", prompt]
+            cmd = ["claude", "--dangerously-skip-permissions", "-c", "-p", prompt]
 
             if self.verbose:
-                print(f"🔧 Running command: {' '.join(cmd[:3])} [prompt...]")
+                print(f"🔧 Running command: {' '.join(cmd[:4])} [prompt...]")
 
             # Stream Claude's output in real-time
             process = subprocess.Popen(
