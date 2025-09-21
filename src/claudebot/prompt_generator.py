@@ -1,7 +1,8 @@
 """Prompt generator interface and base classes for ClaudeBot."""
 
 from abc import ABC, abstractmethod
-from typing import Iterator, Dict, Any, Optional
+from typing import Dict, Any, Optional
+from collections.abc import Iterator
 from .models import TestResult
 
 
@@ -33,7 +34,6 @@ class PromptGenerator(ABC):
         Yields:
             PromptRequest objects containing prompts and metadata
         """
-        pass
 
     @abstractmethod
     def should_continue(self, test_results: Dict[str, TestResult]) -> bool:
@@ -46,7 +46,6 @@ class PromptGenerator(ABC):
         Returns:
             True if more prompts should be generated, False to stop
         """
-        pass
 
     def on_prompt_completed(
         self, request: PromptRequest, success: bool, test_results: Dict[str, TestResult]
@@ -59,7 +58,6 @@ class PromptGenerator(ABC):
             success: Whether the prompt execution was successful
             test_results: Updated test results after prompt execution
         """
-        pass
 
 
 class FunctionBasedGenerator(PromptGenerator):

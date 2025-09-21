@@ -1,7 +1,8 @@
 """Test fixer prompt generator - reproduces current ClaudeBot behavior."""
 
 import random
-from typing import Iterator, Dict, Any
+from typing import Dict
+from collections.abc import Iterator
 from ..prompt_generator import PromptGenerator, PromptRequest
 from ..models import TestResult
 

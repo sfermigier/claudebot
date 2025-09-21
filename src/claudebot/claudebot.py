@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Iterator
+from typing import Optional
 
 from .git_manager import GitManager, GitError
 from .models import TestResult
@@ -75,11 +75,10 @@ class ClaudeBot:
         if self.prompt_file.exists():
             prompt_template = self.prompt_file.read_text()
             return TestFixerGenerator(prompt_template)
-        else:
-            print(
-                f"⚠️ Warning: Prompt file {prompt_file} not found, using default prompt"
-            )
-            return TestFixerGenerator()
+        print(
+            f"⚠️ Warning: Prompt file {prompt_file} not found, using default prompt"
+        )
+        return TestFixerGenerator()
 
     def _load_generator_from_module(self, module_path: str) -> PromptGenerator:
         """Load prompt generator from a Python module."""
@@ -126,7 +125,7 @@ class ClaudeBot:
         print(f"\n🤖 Running Claude Code: {request.description}")
 
         if self.debug:
-            print(f"\n🔍 DEBUG: Prompt being sent to Claude:")
+            print("\n🔍 DEBUG: Prompt being sent to Claude:")
             print(f"{'=' * 60}")
             print(request.prompt)
             print(f"{'=' * 60}\n")
@@ -339,9 +338,8 @@ class ClaudeBot:
         if result.status == "PASSING":
             print(f"✅ Test {test_name} is now PASSING!")
             return True
-        else:
-            print(f"❌ Test {test_name} is still FAILING")
-            return False
+        print(f"❌ Test {test_name} is still FAILING")
+        return False
 
     def check_no_regression(self) -> bool:
         """
@@ -534,7 +532,7 @@ class ClaudeBot:
                 current_failing = len([
                     r for r in self.test_results.values() if r.status == "FAILING"
                 ])
-                print(f"\n📊 Current status:")
+                print("\n📊 Current status:")
                 print(f"   🔧 Tasks completed this session: {fixes_made}")
                 print(f"   ❌ Tests failing: {current_failing}")
                 print(f"   ✅ Tests passing: {len(self.previously_passing)}")

@@ -1,8 +1,8 @@
 """Implementation comparator prompt generator for comparing two codebases."""
 
-import os
 from pathlib import Path
-from typing import Iterator, Dict, Any, List, Tuple
+from typing import Dict, List, Tuple
+from collections.abc import Iterator
 from ..prompt_generator import PromptGenerator, PromptRequest
 from ..models import TestResult
 
