@@ -1,4 +1,4 @@
-from claudebot.utils import convert_test_name_to_pytest_path
+from claudebot.run_tests import convert_test_name_to_pytest_path
 
 
 def test_path_with_dots():

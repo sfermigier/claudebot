@@ -1,13 +1,15 @@
 """Main ClaudeBot class and CLI functionality."""
 
 import importlib.util
+import os
+import pty
+import select
 import subprocess
 import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from . import default_prompt_generator
 
@@ -157,22 +159,66 @@ class ClaudeBot:
             if self.verbose:
                 print(f"🔧 Running command: {' '.join(cmd[:4])} [prompt...]")
 
-            # Stream Claude's output in real-time
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            )
+            # Try pty-based streaming for better real-time output
+            try:
+                master, slave = pty.openpty()
 
-            # Stream output line by line
-            for line in process.stdout:
-                print(line, end="")
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=slave,
+                    stderr=slave,
+                    stdin=slave,
+                    close_fds=True,
+                )
 
-            # Wait for process to complete
-            return_code = process.wait()
+                # Close slave fd in parent process
+                os.close(slave)
+
+                # Stream output in real-time
+                while True:
+                    # Check if process is still running
+                    if process.poll() is not None:
+                        # Process finished, read any remaining output
+                        try:
+                            remaining = os.read(master, 1024).decode("utf-8", errors="replace")
+                            if remaining:
+                                print(remaining, end="", flush=True)
+                        except OSError:
+                            pass
+                        break
+
+                    # Use select to check for available data
+                    ready, _, _ = select.select([master], [], [], 0.1)
+                    if ready:
+                        try:
+                            data = os.read(master, 1024).decode("utf-8", errors="replace")
+                            if data:
+                                print(data, end="", flush=True)
+                        except OSError:
+                            break
+
+                # Wait for process to complete
+                return_code = process.wait()
+                os.close(master)
+
+            except (OSError, ImportError):
+                # Fallback to regular subprocess if pty fails
+                print("🔄 Falling back to regular subprocess streaming...")
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=0,
+                    universal_newlines=True,
+                )
+
+                # Stream output line by line
+                for line in process.stdout:
+                    print(line, end="", flush=True)
+
+                # Wait for process to complete
+                return_code = process.wait()
 
             success = return_code == 0
             print(

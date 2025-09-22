@@ -12,7 +12,7 @@
 # from .claudebot import ClaudeBot
 # from .cli import main
 # from .git_manager import GitManager, GitError
-# from .test_runner import TestRunner
+# from .run_tests import TestRunner
 # from .utils import convert_test_name_to_pytest_path
 #
 # __all__ = [

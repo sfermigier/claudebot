@@ -1,9 +1,8 @@
 """Default prompt generator for test fixing using TestRunner."""
 
 import random
-from pathlib import Path
 
-from .test_runner import TestRunner
+from .run_tests import TestRunner
 
 # Keep this constant prompt template here.
 PROMPT_TEMPLATE = """
@@ -32,8 +31,8 @@ Please implement the fix now.
 def get_prompts():
     """Generate prompts to fix failing tests using TestRunner."""
     # Use TestRunner to get test results with proper JUnit XML parsing
-    test_runner = TestRunner()
-    test_results = test_runner.run_full_test_suite(["tests/"], verbose=False)
+    run_tests = TestRunner()
+    test_results = run_tests.run_full_test_suite(["tests/"], verbose=False)
 
     # Find failing tests
     failing_tests = [
@@ -49,14 +48,7 @@ def get_prompts():
     test_name = selected_test.name
     test_output = selected_test.output
 
-    # Use custom prompt from file if available
-    prompt_file = Path("prompt-fix.md")
-    if prompt_file.exists():
-        prompt_template = prompt_file.read_text().strip()
-    else:
-        prompt_template = PROMPT_TEMPLATE
-
-    prompt = prompt_template.format(test_name=test_name, test_output=test_output)
+    prompt = PROMPT_TEMPLATE.format(test_name=test_name, test_output=test_output)
 
     yield {
         "prompt": prompt,
