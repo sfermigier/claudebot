@@ -1,6 +1,6 @@
 [project]
 name = "claudebot"
-version = "0.1.2"
+version = "0.1.4"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-claudebot = "claudebot:main"
+claudebot = "claudebot.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.8.4,<0.9.0"]

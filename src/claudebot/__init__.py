@@ -1,31 +1,25 @@
-"""
-ClaudeBot - Autonomous Test Fixing Bot
-
-This package continuously fixes failing tests using Claude Code:
-1. Runs the full test suite and tracks test status
-2. Randomly selects failing tests to fix
-3. Uses Claude Code with user-provided prompts
-4. Verifies fixes and checks for regressions
-5. Commits successful fixes and continues the cycle
-"""
-
-from .claudebot import ClaudeBot, main
-from .git_manager import GitManager, GitError
-from .models import TestResult
-from .test_runner import TestRunner
-from .utils import convert_test_name_to_pytest_path
-from .prompt_generator import PromptGenerator, PromptRequest
-from .generators.test_fixer import TestFixerGenerator
-
-__all__ = [
-    "ClaudeBot",
-    "GitError",
-    "GitManager",
-    "PromptGenerator",
-    "PromptRequest",
-    "TestFixerGenerator",
-    "TestResult",
-    "TestRunner",
-    "convert_test_name_to_pytest_path",
-    "main",
-]
+# """
+# ClaudeBot - Autonomous Task Execution Bot
+#
+# This package continuously executes tasks using Claude Code:
+# 1. Loads custom prompt generators
+# 2. Generates prompts based on current state
+# 3. Executes prompts with Claude Code
+# 4. Repeats in a continuous loop
+# 5. Supports any custom task via generator functions
+# """
+#
+# from .claudebot import ClaudeBot
+# from .cli import main
+# from .git_manager import GitManager, GitError
+# from .test_runner import TestRunner
+# from .utils import convert_test_name_to_pytest_path
+#
+# __all__ = [
+#     "ClaudeBot",
+#     "GitError",
+#     "GitManager",
+#     "TestRunner",
+#     "convert_test_name_to_pytest_path",
+#     "main",
+# ]

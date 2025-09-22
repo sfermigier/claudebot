@@ -3,10 +3,20 @@
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+
 from pathlib import Path
 
-from .models import TestResult
 from .utils import convert_test_name_to_pytest_path
+
+
+@dataclass
+class TestResult:
+    """Represents the result of a single test."""
+
+    name: str
+    status: str  # "PASSING", "FAILING", or "SKIPPED"
+    output: str = ""
 
 
 class TestRunner:
