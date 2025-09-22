@@ -56,9 +56,7 @@ def get_prompts():
     else:
         prompt_template = PROMPT_TEMPLATE
 
-    prompt = prompt_template.format(
-        test_name=test_name, test_output=test_output
-    )
+    prompt = prompt_template.format(test_name=test_name, test_output=test_output)
 
     yield {
         "prompt": prompt,

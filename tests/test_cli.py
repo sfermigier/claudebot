@@ -52,9 +52,12 @@ def test_cli_all_args():
     """Test CLI with all arguments specified."""
     test_args = [
         "claudebot",
-        "--prompt-generator", "custom_generator.py",
-        "--max-iterations", "5",
-        "--delay", "30",
+        "--prompt-generator",
+        "custom_generator.py",
+        "--max-iterations",
+        "5",
+        "--delay",
+        "30",
         "--verbose",
         "--debug",
     ]
@@ -81,7 +84,8 @@ def test_cli_short_args():
     """Test CLI with short argument forms."""
     test_args = [
         "claudebot",
-        "--pg", "short_generator.py",
+        "--pg",
+        "short_generator.py",
         "-v",
         "-d",
     ]
@@ -128,7 +132,8 @@ def test_cli_partial_args():
     """Test CLI with partial arguments."""
     test_args = [
         "claudebot",
-        "--max-iterations", "10",
+        "--max-iterations",
+        "10",
         "--verbose",
     ]
 
