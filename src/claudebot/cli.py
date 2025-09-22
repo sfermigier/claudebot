@@ -26,12 +26,6 @@ def main(bot_class=ClaudeBot):
         help="Python module containing prompt generator (e.g., 'my_generator.py' or 'package.module')",
     )
     parser.add_argument(
-        "--max-iterations",
-        type=int,
-        default=None,
-        help="Maximum number of iterations (default: unlimited)",
-    )
-    parser.add_argument(
         "--delay",
         type=int,
         default=60,
@@ -59,6 +53,4 @@ def main(bot_class=ClaudeBot):
         debug=args.debug,
     )
 
-    bot.run_continuous_loop(
-        max_iterations=args.max_iterations, delay_between_iterations=args.delay
-    )
+    bot.run_continuous_loop(delay_between_iterations=args.delay)

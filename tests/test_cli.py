@@ -16,13 +16,11 @@ class StubClaudeBot:
         self.verbose = verbose
         self.debug = debug
         self.run_continuous_loop_called = False
-        self.max_iterations = None
         self.delay_between_iterations = None
 
-    def run_continuous_loop(self, max_iterations=None, delay_between_iterations=60):
+    def run_continuous_loop(self, delay_between_iterations=60):
         """Record that the method was called with the given parameters."""
         self.run_continuous_loop_called = True
-        self.max_iterations = max_iterations
         self.delay_between_iterations = delay_between_iterations
 
 
@@ -44,7 +42,6 @@ def test_cli_default_args():
         assert stub_bot.verbose is False
         assert stub_bot.debug is False
         assert stub_bot.run_continuous_loop_called is True
-        assert stub_bot.max_iterations is None
         assert stub_bot.delay_between_iterations == 60
 
 
@@ -54,8 +51,6 @@ def test_cli_all_args():
         "claudebot",
         "--prompt-generator",
         "custom_generator.py",
-        "--max-iterations",
-        "5",
         "--delay",
         "30",
         "--verbose",
@@ -76,7 +71,6 @@ def test_cli_all_args():
 
         # Verify run_continuous_loop was called with correct args
         assert stub_bot.run_continuous_loop_called is True
-        assert stub_bot.max_iterations == 5
         assert stub_bot.delay_between_iterations == 30
 
 
@@ -132,8 +126,6 @@ def test_cli_partial_args():
     """Test CLI with partial arguments."""
     test_args = [
         "claudebot",
-        "--max-iterations",
-        "10",
         "--verbose",
     ]
 
@@ -149,5 +141,4 @@ def test_cli_partial_args():
         main(mock_bot_class)
 
         assert stub_bot.run_continuous_loop_called is True
-        assert stub_bot.max_iterations == 10
         assert stub_bot.delay_between_iterations == 60  # default

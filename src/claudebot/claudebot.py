@@ -23,14 +23,11 @@ class ClaudeBot:
     debug: bool = False
 
     # Keep main method at the top for to make the structure clear
-    def run_continuous_loop(
-        self, max_iterations: Optional[int] = None, delay_between_iterations: int = 60
-    ) -> None:
+    def run_continuous_loop(self, delay_between_iterations: int = 60) -> None:
         """
-        Run the continuous task execution loop.
+        Run the task execution loop until generator is exhausted.
 
         Args:
-            max_iterations: Maximum number of iterations (None for unlimited)
             delay_between_iterations: Delay in seconds between iterations
         """
         generator_func = self._get_generator_function()
@@ -39,41 +36,30 @@ class ClaudeBot:
         print("🚀 Starting ClaudeBot")
         print(f"🎯 Using prompt generator: {generator_name}")
         print(f"⏰ Delay between iterations: {delay_between_iterations} seconds")
-        if max_iterations:
-            print(f"🔄 Max iterations: {max_iterations}")
-        else:
-            print("🔄 Running indefinitely (Ctrl+C to stop)")
 
         iteration = 0
         tasks_completed = 0
 
         try:
+            current_generator = generator_func()
+
             while True:
                 iteration += 1
-
-                if max_iterations and iteration > max_iterations:
-                    print(f"\n🏁 Reached maximum iterations ({max_iterations})")
-                    break
 
                 print(f"\n{'=' * 80}")
                 print(f"🔄 ITERATION {iteration}")
                 print(f"{'=' * 80}")
 
-                # Get prompts from generator
+                # Get next prompt from generator
                 try:
-                    prompts = list(generator_func())
+                    prompt_dict = next(current_generator)
+                except StopIteration:
+                    print("🏁 Generator exhausted, stopping...")
+                    break
                 except Exception as e:
                     print(f"❌ Error in prompt generator: {e}")
-                    time.sleep(delay_between_iterations)
-                    continue
+                    break
 
-                if not prompts:
-                    print("⚠️ No prompts generated, checking again after delay...")
-                    time.sleep(delay_between_iterations)
-                    continue
-
-                # Process the first prompt
-                prompt_dict = prompts[0]
                 description = prompt_dict.get("description", "Unknown task")
                 print(f"🎯 Processing: {description}")
 
@@ -89,12 +75,9 @@ class ClaudeBot:
                 print(f"\n📊 Tasks completed this session: {tasks_completed}")
 
                 # Delay before next iteration
-                if max_iterations is None or iteration < max_iterations:
-                    print(
-                        f"\n⏳ Waiting {delay_between_iterations} seconds before next iteration..."
-                    )
-                    print("   (Press Ctrl+C to stop)")
-                    time.sleep(delay_between_iterations)
+                print(f"\n⏳ Waiting {delay_between_iterations} seconds before next iteration...")
+                print("   (Press Ctrl+C to stop)")
+                time.sleep(delay_between_iterations)
 
         except KeyboardInterrupt:
             print("\n🛑 ClaudeBot stopped by user")
