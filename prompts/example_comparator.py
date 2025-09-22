@@ -5,8 +5,8 @@ Example implementation comparator generator.
 
 from pathlib import Path
 
-COMPARISON_PROMPT_TEMPLATE = """
-I'm working on rewriting a project from C to Python.
+PROMPT_TEMPLATE = """
+We are working on rewriting a project from C to Python.
 
 I need you to compare and synchronize two implementations of the same module.
 
@@ -21,7 +21,7 @@ Please:
 3. If needed, suggest improvements to make the Python version more equivalent to the C version
 4. If needed, fix any bugs or inconsistencies in the Python version
 
-Focus on ensuring the Python implementation produces the same results for the same inputs as the C implementation. Note that the Python version should be idiomatic and leverage Python's strengths, but must remain functionally equivalent to the C version.
+Focus on ensuring the Python implementation produces the same results for the same inputs as the C implementation. Note that the Python version should be idiomatic and leverage Python's strengths, but must remain strictly functionally equivalent to the C version.
 """
 
 
@@ -43,7 +43,7 @@ def get_prompts():
         # Look for corresponding Python file with same relative path
         py_file = python_dir / relative_path.with_suffix(".py")
 
-        prompt = COMPARISON_PROMPT_TEMPLATE.format(
+        prompt = PROMPT_TEMPLATE.format(
             module_name=module_name,
             py_file=py_file,
             c_file=c_file
