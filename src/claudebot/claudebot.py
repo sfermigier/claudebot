@@ -151,7 +151,6 @@ class ClaudeBot:
             cmd = [
                 "claude",
                 "--dangerously-skip-permissions",
-                "-c",
                 "-p",
                 prompt,
             ]
